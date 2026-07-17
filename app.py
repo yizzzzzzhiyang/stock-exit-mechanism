@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-股票退出机制 v1.1 · 操作面板
+股票退出机制 → 供应链选股
 Streamlit 前端 — 一键启动，浏览器操作
 
-启动: cd ~/股票退出机制1.0 && streamlit run app.py
+启动: cd ~/供应链选股 && streamlit run app.py
 """
 import streamlit as st
 import pandas as pd
@@ -19,7 +19,7 @@ sys.path.insert(0, PROJECT_DIR)
 
 # ── 页面配置 ──
 st.set_page_config(
-    page_title="退出机制 v1.1",
+    page_title="供应链选股 v1.1",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -36,7 +36,62 @@ def load_serenity_picks():
     if not os.path.exists(path):
         return None
     with open(path) as f:
-        return json.load(f)
+        data = json.load(f)
+
+    # 适配新旧两种 JSON 格式
+    # 新格式（2026-07-09+）：top_sectors, top_picks, generated_at
+    # 旧格式：sectors, rankings, date
+    if 'top_sectors' in data or 'top_picks' in data:
+        adapted = _adapt_v2_schema(data)
+        return adapted
+    return data
+
+
+def _adapt_v2_schema(data: dict) -> dict:
+    """将新格式 Serenity JSON 适配为面板能读的旧格式"""
+    adapted = {
+        'date': data.get('generated_at', '')[:10],
+        'market': {},  # 新格式没有大盘概览
+        'sectors': [],
+        'rankings': [],
+        'stocks': [],
+    }
+
+    # 板块
+    for sec in data.get('top_sectors', []):
+        adapted_sec = {
+            'name': sec.get('sector_name', sec.get('sector_code', '?')),
+            'gain': sec.get('combined_score', ''),
+            'ai_analysis': sec.get('rationale', ''),
+            'stocks': [],
+        }
+        # 新格式的个股在顶层 top_picks 里，按板块名匹配
+        sec_name = adapted_sec['name']
+        for pick in data.get('top_picks', []):
+            if pick.get('sector_name', '') == sec_name:
+                adapted_sec['stocks'].append({
+                    'name': pick.get('name', pick.get('code', '?')),
+                    'code': pick.get('code', ''),
+                    'score': pick.get('funnel_score', 50),
+                    'action': '买入' if pick.get('funnel_score', 0) >= 5 else '观察',
+                    'stop_pct': f"-{pick.get('suggested_position_pct', 5)}%",
+                })
+        adapted['sectors'].append(adapted_sec)
+
+    # 个股排名
+    for i, pick in enumerate(data.get('top_picks', [])):
+        adapted['rankings'].append({
+            'rank': i + 1,
+            'name': pick.get('name', '?'),
+            'code': pick.get('code', ''),
+            'score': pick.get('funnel_score', 50),
+            'action': '买入' if pick.get('funnel_score', 0) >= 5 else '观察',
+            'stop_pct': f"-{pick.get('suggested_position_pct', 5)}%",
+            'position': f"{pick.get('suggested_position_pct', 5)}%",
+        })
+
+    adapted['stocks'] = adapted['rankings']
+    return adapted
 
 
 @st.cache_data(ttl=120)
@@ -236,7 +291,7 @@ with st.sidebar:
         st.warning("⚠️ serenity_picks.json 不存在")
 
     st.divider()
-    st.caption("v1.1 · 本地运行 · 手动操作")
+    st.caption("供应链选股 v1.1 · 本地运行 · 手动操作")
 
 # ── 主内容区：三个Tab ──
 tab1, tab2, tab3 = st.tabs(["🎯 今日选股", "📊 买卖信号", "📋 我的持仓"])
