@@ -1,0 +1,33 @@
+# 股票退出机制 v1.1 — 默认回测配置
+# 修改此文件后重新运行 main.py 即可生效，无需改代码。
+
+# ── 策略参数 ──
+strategy:
+  # CUSUM 波动率倍数：越大 → 触发越少（更保守）
+  cusum_vol_mult: 1.5
+  # 最长持仓天数（交易日）
+  num_days: 20
+  # Meta-Labeling 接受阈值：越大 → 信号越少（更严格）
+  meta_threshold: 0.3
+
+# ── Triple-Barrier 宽度 ──
+# 每项 [止盈倍数, 止损倍数]，相对于 ATR 的倍数
+barriers:
+  - [2, 1]  # 宽止盈窄止损
+  - [2, 2]  # 对称
+  - [3, 1]  # 更宽止盈
+  - [1, 1]  # 窄对称
+
+# ── 交易成本（A 股实际费率） ──
+cost:
+  commission: 0.00025   # 单边佣金（万2.5）
+  stamp_tax: 0.001      # 印花税（千1，仅卖出）
+  slippage: 0.001       # 滑点估计（0.1%）
+
+# ── 数据源 ──
+data:
+  # stock: "000001.SZ"
+  # start: "2015-01-01"
+  # end: "2025-12-31"
+  # 股票代码和日期范围建议通过命令行传递：
+  #   python main.py --config configs/default.yaml --ts_code 000001.SZ

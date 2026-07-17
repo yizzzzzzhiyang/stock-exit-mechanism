@@ -1,0 +1,17 @@
+# 保守策略配置（示例：更严格的退出条件）
+# 对比测试：python main.py --config configs/default.yaml ...
+#           python main.py --config configs/conservative.yaml ...
+
+strategy:
+  cusum_vol_mult: 2.0       # 更大 → 触发更少，更保守
+  num_days: 15               # 更短 → 强制退出更快
+  meta_threshold: 0.5        # 更大 → 信号更少，更严格
+
+barriers:
+  - [1, 1]   # 窄屏障，快速进出
+  - [2, 2]   # 对称保护
+
+cost:
+  commission: 0.00025
+  stamp_tax: 0.001
+  slippage: 0.001
